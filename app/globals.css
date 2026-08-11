@@ -129,6 +129,14 @@
   }
 }
 
+@utility gradient {
+  @apply bg-linear-to-br from-blue-600 to-purple-600;
+}
+
+@utility gradient-title {
+  @apply bg-linear-to-br from-blue-600 to-purple-600 font-extrabold tracking-tighter pr-2 pb-2 text-transparent bg-clip-text;
+}
+
 
 .hero-image-wrapper {
   perspective: 500px;
