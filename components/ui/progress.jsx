@@ -8,20 +8,26 @@ import { cn } from "@/lib/utils"
 function Progress({
   className,
   value,
+  extraStyles, 
   ...props
 }) {
   return (
     <ProgressPrimitive.Root
       data-slot="progress"
       className={cn(
-        "relative flex h-1 w-full items-center overflow-x-hidden rounded-full bg-muted",
+        "relative flex h-2.5 w-full items-center overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800",
         className
       )}
-      {...props}>
+      {...props} 
+    >
       <ProgressPrimitive.Indicator
         data-slot="progress-indicator"
-        className="size-full flex-1 bg-primary transition-all"
-        style={{ transform: `translateX(-${100 - (value || 0)}%)` }} />
+        className={cn(
+          "h-full w-full flex-1 transition-all duration-300 ease-in-out rounded-full",
+          extraStyles ? extraStyles : "bg-primary" 
+        )}
+        style={{ transform: `translateX(-${100 - (value || 0)}%)` }} 
+      />
     </ProgressPrimitive.Root>
   );
 }
