@@ -84,8 +84,7 @@ export default function EmailTemplate({
             )}
 
             <Text style={styles.footer}>
-              Thank you for using Welth. Keep tracking your finances for better
-              financial health!
+              Thank you for using NSS Treasurer💰. Every rupee tracked brings us closer to making a bigger impact! Not Me, But You — keeping every rupee accountable to serve our community better.
             </Text>
           </Container>
         </Body>

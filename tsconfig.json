@@ -33,7 +33,7 @@
     "**/*.mts",
     "**/*.ts",
     "**/*.tsx"
-, "app/api/inngest/route.js"  ],
+, "app/api/inngest/route.js", "app/(main)/transaction/_components/transaction-form.jsx"  ],
   "exclude": [
     "node_modules"
   ]
