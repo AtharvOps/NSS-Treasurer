@@ -216,9 +216,9 @@ export async function updateTransaction(id, data) {
 
 // Scan Receipt
 export async function scanReceipt(file) {
+  const models = ["gemini-3.7-flash", "gemini-2.5-flash", "gemini-1.5-flash", "gemini-1.5-pro"];
+  
   try {
-    const model = genAI.getGenerativeModel({ model: "gemini-3.7-flash" });
-
     // Convert File to ArrayBuffer
     const arrayBuffer = await file.arrayBuffer();
     // Convert ArrayBuffer to Base64
@@ -246,36 +246,43 @@ export async function scanReceipt(file) {
       If this is not a receipt, return an empty object: {}
     `;
 
-    const result = await model.generateContent([
-      {
-        inlineData: {
-          data: base64String,
-          mimeType: file.type,
-        },
-      },
-      prompt,
-    ]);
+    let lastError = null;
 
-    const response = await result.response;
-    const text = response.text();
-    const cleanedText = text.replace(/```(?:json)?\n?/g, "").trim();
+    for (const modelName of models) {
+      try {
+        const model = genAI.getGenerativeModel({ model: modelName });
+        const result = await model.generateContent([
+          {
+            inlineData: {
+              data: base64String,
+              mimeType: file.type,
+            },
+          },
+          prompt,
+        ]);
 
-    try {
-      const data = JSON.parse(cleanedText);
-      return {
-        amount: parseFloat(data.amount),
-        date: new Date(data.date),
-        description: data.description,
-        category: data.category,
-        merchantName: data.merchantName,
-      };
-    } catch (parseError) {
-      console.error("Error parsing JSON response:", parseError);
-      throw new Error("Invalid response format from Gemini");
+        const response = await result.response;
+        const text = response.text();
+        const cleanedText = text.replace(/```(?:json)?\n?/g, "").trim();
+
+        const data = JSON.parse(cleanedText);
+        return {
+          amount: parseFloat(data.amount) || 0,
+          date: data.date ? new Date(data.date) : new Date(),
+          description: data.description || "Scanned Receipt",
+          category: data.category || "Miscellaneous",
+          merchantName: data.merchantName || "",
+        };
+      } catch (err) {
+        lastError = err;
+        console.warn(`Receipt scan with ${modelName} failed, trying fallback...`, err?.message);
+      }
     }
+
+    throw lastError || new Error("Failed to scan receipt with available Gemini models");
   } catch (error) {
     console.error("Error scanning receipt:", error);
-    throw new Error("Failed to scan receipt");
+    throw new Error("Failed to scan receipt: " + (error.message || "Invalid response"));
   }
 }
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
 import useFetch from "@/hooks/use-fetch";
@@ -29,15 +29,14 @@ import { createAccount } from "@/actions/dashboard";
 import { accountSchema } from "@/app/lib/schema";
 
 export function CreateAccountDrawer({ children }) {
-
   const [open, setOpen] = useState(false);
   
   const {
     register,
     handleSubmit,
+    control,
     formState: { errors },
     setValue,
-    watch,
     reset,
   } = useForm({
     resolver: zodResolver(accountSchema),
@@ -49,6 +48,12 @@ export function CreateAccountDrawer({ children }) {
     },
   });
 
+  const isDefaultValue = useWatch({
+    control,
+    name: "isDefault",
+    defaultValue: false,
+  });
+
   const {
     loading: createAccountLoading,
     fn: createAccountFn,
@@ -57,16 +62,13 @@ export function CreateAccountDrawer({ children }) {
   } = useFetch(createAccount);
 
   const onSubmit = async (data) => {
-    await createAccountFn(data);
-  };
-
-  useEffect(() => {
-    if (newAccount) {
+    const res = await createAccountFn(data);
+    if (res?.success || res) {
       toast.success("Account created successfully");
       reset();
       setOpen(false);
     }
-  }, [newAccount, reset]);
+  };
 
   useEffect(() => {
     if (error) {
@@ -109,7 +111,7 @@ export function CreateAccountDrawer({ children }) {
               </label>
               <Select
                 onValueChange={(value) => setValue("type", value)}
-                defaultValue={watch("type")}
+                defaultValue="CURRENT"
               >
                 <SelectTrigger id="type">
                   <SelectValue placeholder="Select type" />
@@ -157,7 +159,7 @@ export function CreateAccountDrawer({ children }) {
               </div>
               <Switch
                 id="isDefault"
-                checked={watch("isDefault")}
+                checked={isDefaultValue}
                 onCheckedChange={(checked) => setValue("isDefault", checked)}
               />
             </div>

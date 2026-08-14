@@ -95,23 +95,23 @@ export const howItWorksData = [
 // Testimonials Data
 export const testimonialsData = [
   {
-    name: "Pranav Dangare",
+    name: "Sagar More",
     role: "PVGCOET NSS Alumni",
-    image: "/t0.png", // t0.png
+    image: "/t00.jpeg", 
     quote:
       "Being part of NSS PVGCOET was one of the most rewarding experiences of my college life. The values I learned, the people I met, and the change we created together shaped who I am today. NSS taught me the importance of service, teamwork, and resilience—lessons I carry forward in my professional journey.",
   },
   {
-    name: "Jayant Khandebharad",
+    name: "Sarvadny Pawar",
     role: "PVGCOET NSS Alumni",
-    image: "/t2.jpg", // 84cd911b-c503-4e88-b725-1e4265e69a54.png
+    image: "/t02.jpeg", // 84cd911b-c503-4e88-b725-1e4265e69a54.png
     quote:
       "My time as a volunteer with PVGCOET NSS has been the best time of my life. Handling responsibilities like getting permissions from the administration, arranging things for events, and managing teams taught me so much. These experiences have made me a better person and have also been very helpful in my career. I always look back fondly with time and try to visit whenever I can because I love my juniors.",
   },
   {
-    name: "Sakshi Rathi",
+    name: "Shraddha Vidhate",
     role: "PVGCOET NSS Alumni",
-    image: "/t1.jpg", // 18aae06e-d7fd-4d73-820f-9bb450625b19.png
+    image: "/t01.jpeg", // 18aae06e-d7fd-4d73-820f-9bb450625b19.png
     quote:
       "When we stand for change, we ignite the potential to spark a powerful and widespread movement. This movement possesses the ability to wield significant influence, creating ripples that touch every corner of society. This movement draws upon the collective genius of individuals coming together, each contributing their unique talents and insights. United, we can achieve remarkable feats, inspire others, and create a legacy of transformation that resonates for generations.",
   },
