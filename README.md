@@ -332,7 +332,7 @@ This project is open-source and licensed under the [MIT License](LICENSE).
 <div align="center">
 
 **National Service Scheme (NSS Unit)**  
-*Pune Vidyarthi Griha's College of Engineering and Technology & G. K. Pate (Wani) Institute of Management, Pune*  
+*Pune Vidyarthi Griha's College of Engineering and Technology, Pune*  
 Affiliated to Savitribai Phule Pune University (SPPU)
 
 *"NOT ME BUT YOU"*
