@@ -15,10 +15,12 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { updateBudget } from "@/actions/budget";
+import { updateBudget, sendTestBudgetAlertEmail } from "@/actions/budget";
+import { Mail, Loader2 } from "lucide-react";
 
 export function BudgetProgress({ initialBudget, currentExpenses = 0 }) {
   const [isEditing, setIsEditing] = useState(false);
+  const [isSendingTest, setIsSendingTest] = useState(false);
   const [newBudget, setNewBudget] = useState(
     initialBudget?.amount?.toString() || ""
   );
@@ -50,6 +52,22 @@ export function BudgetProgress({ initialBudget, currentExpenses = 0 }) {
     if (result?.success) {
       setIsEditing(false);
       toast.success("NSS Unit Budget updated successfully");
+    }
+  };
+
+  const handleTestEmail = async () => {
+    setIsSendingTest(true);
+    try {
+      const res = await sendTestBudgetAlertEmail();
+      if (res?.success) {
+        toast.success(`Budget alert email sent successfully to ${res.email || "your registered email"}!`);
+      } else {
+        toast.error(res?.error || "Could not send budget alert email. Please check your email configuration.");
+      }
+    } catch (e) {
+      toast.error(e.message || "Failed to send test email");
+    } finally {
+      setIsSendingTest(false);
     }
   };
 
@@ -91,14 +109,34 @@ export function BudgetProgress({ initialBudget, currentExpenses = 0 }) {
     <Card className={`border shadow-sm overflow-hidden ${isRed ? "border-red-400/40 bg-red-50/10 dark:bg-red-950/20" : "border-emerald-500/30 bg-emerald-50/10 dark:bg-emerald-950/20"}`}>
       <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between space-y-2 sm:space-y-0 pb-3 border-b border-slate-200/40 dark:border-slate-800">
         <div className="flex-1">
-          <div className="flex items-center gap-2 flex-wrap">
-            <div className={`h-7 w-7 rounded-lg ${isRed ? "bg-red-600" : "bg-emerald-600"} text-white flex items-center justify-center shadow-xs`}>
-              <Wallet className="h-4 w-4" />
+          <div className="flex items-center gap-2 flex-wrap justify-between">
+            <div className="flex items-center gap-2 flex-wrap">
+              <div className={`h-7 w-7 rounded-lg ${isRed ? "bg-red-600" : "bg-emerald-600"} text-white flex items-center justify-center shadow-xs`}>
+                <Wallet className="h-4 w-4" />
+              </div>
+              <CardTitle className="text-base font-bold text-slate-950 dark:text-white">
+                NSS Budget Allocation &amp; Grant Utilization
+              </CardTitle>
+              {getStatusBadge()}
             </div>
-            <CardTitle className="text-base font-bold text-slate-950 dark:text-white">
-              NSS Budget Allocation &amp; Grant Utilization
-            </CardTitle>
-            {getStatusBadge()}
+
+            {/* Test Alert Email Action Button */}
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleTestEmail}
+              disabled={isSendingTest || !initialBudget}
+              className="h-7 text-xs gap-1.5 border-blue-900/20 text-blue-900 dark:text-blue-200 hover:bg-blue-50 dark:hover:bg-blue-950/40"
+              title="Test sending budget alert email to your registered address"
+            >
+              {isSendingTest ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Mail className="h-3.5 w-3.5" />
+              )}
+              <span>Test Alert Email</span>
+            </Button>
           </div>
           <div className="flex items-center gap-2 mt-2">
             {isEditing ? (

@@ -7,6 +7,9 @@ import { auth } from "@clerk/nextjs/server";
 import { revalidatePath } from "next/cache";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
+import { checkAndSendBudgetAlert } from "@/actions/budget";
+import { getAccountBalanceUpdates } from "@/lib/transaction-balance";
+
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 const serializeAmount = (obj) => ({
@@ -95,6 +98,7 @@ export async function createTransaction(data) {
       const newTransaction = await tx.transaction.create({
         data: {
           ...data,
+          receiptUrl: data.receiptUrl || null,
           userId: user.id,
           nextRecurringDate:
             data.isRecurring && data.recurringInterval
@@ -110,6 +114,13 @@ export async function createTransaction(data) {
 
       return newTransaction;
     });
+
+    // Check and send budget alert in background if this is an expense
+    if (data.type === "EXPENSE") {
+      checkAndSendBudgetAlert(user.id).catch((err) =>
+        console.warn("Budget alert trigger warning:", err?.message)
+      );
+    }
 
     revalidatePath("/dashboard");
     revalidatePath(`/account/${transaction.accountId}`);
@@ -166,18 +177,31 @@ export async function updateTransaction(id, data) {
 
     if (!originalTransaction) throw new Error("Transaction not found");
 
-    // Calculate balance changes
-    const oldBalanceChange =
-      originalTransaction.type === "EXPENSE"
-        ? -originalTransaction.amount.toNumber()
-        : originalTransaction.amount.toNumber();
-
-    const newBalanceChange =
-      data.type === "EXPENSE" ? -data.amount : data.amount;
-
-    const netBalanceChange = newBalanceChange - oldBalanceChange;
+    const accountBalanceUpdates = getAccountBalanceUpdates(
+      {
+        accountId: originalTransaction.accountId,
+        type: originalTransaction.type,
+        amount: originalTransaction.amount,
+      },
+      {
+        accountId: data.accountId,
+        type: data.type,
+        amount: data.amount,
+      }
+    );
 
     const transaction = await db.$transaction(async (tx) => {
+      const newAccount = await tx.account.findUnique({
+        where: {
+          id: data.accountId,
+          userId: user.id,
+        },
+      });
+
+      if (!newAccount) {
+        throw new Error("Account not found");
+      }
+
       const updated = await tx.transaction.update({
         where: {
           id,
@@ -185,6 +209,7 @@ export async function updateTransaction(id, data) {
         },
         data: {
           ...data,
+          receiptUrl: data.receiptUrl !== undefined ? data.receiptUrl : undefined,
           nextRecurringDate:
             data.isRecurring && data.recurringInterval
               ? calculateNextRecurringDate(data.date, data.recurringInterval)
@@ -192,21 +217,31 @@ export async function updateTransaction(id, data) {
         },
       });
 
-      // Update account balance
-      await tx.account.update({
-        where: { id: data.accountId },
-        data: {
-          balance: {
-            increment: netBalanceChange,
+      for (const { accountId, increment } of accountBalanceUpdates) {
+        await tx.account.update({
+          where: { id: accountId },
+          data: {
+            balance: {
+              increment,
+            },
           },
-        },
-      });
+        });
+      }
 
       return updated;
     });
 
+    if (data.type === "EXPENSE") {
+      checkAndSendBudgetAlert(user.id).catch((err) =>
+        console.warn("Budget alert trigger warning on update:", err?.message)
+      );
+    }
+
     revalidatePath("/dashboard");
     revalidatePath(`/account/${data.accountId}`);
+    if (originalTransaction.accountId !== data.accountId) {
+      revalidatePath(`/account/${originalTransaction.accountId}`);
+    }
 
     return { success: true, data: serializeAmount(transaction) };
   } catch (error) {
@@ -216,13 +251,21 @@ export async function updateTransaction(id, data) {
 
 // Scan Receipt
 export async function scanReceipt(file) {
-  const models = ["gemini-3.7-flash", "gemini-2.5-flash", "gemini-1.5-flash", "gemini-1.5-pro"];
+  const models = [
+    "gemini-3.5-flash",
+    "gemini-3.6-flash",
+    "gemini-3.7-flash",
+    "gemini-3.1-flash-lite",
+    "gemini-flash-latest",
+  ];
   
   try {
     // Convert File to ArrayBuffer
     const arrayBuffer = await file.arrayBuffer();
     // Convert ArrayBuffer to Base64
     const base64String = Buffer.from(arrayBuffer).toString("base64");
+    const mimeType = file.type || "image/jpeg";
+    const receiptDataUrl = `data:${mimeType};base64,${base64String}`;
 
     const prompt = `
       Analyze the receipt image and extract the following information in **valid JSON** format:
@@ -255,7 +298,7 @@ export async function scanReceipt(file) {
           {
             inlineData: {
               data: base64String,
-              mimeType: file.type,
+              mimeType: mimeType,
             },
           },
           prompt,
@@ -272,6 +315,7 @@ export async function scanReceipt(file) {
           description: data.description || "Scanned Receipt",
           category: data.category || "Miscellaneous",
           merchantName: data.merchantName || "",
+          receiptUrl: receiptDataUrl,
         };
       } catch (err) {
         lastError = err;

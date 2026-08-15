@@ -22,10 +22,22 @@ import {
   CheckCircle2,
   AlertCircle,
   Tag,
+  Eye,
+  ExternalLink,
+  Image as ImageIcon,
 } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
+
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 
 import {
   Table,
@@ -84,6 +96,7 @@ const RECURRING_INTERVALS = {
 
 export function TransactionTable({ transactions = [], accountName = "NSS Account" }) {
   const [selectedIds, setSelectedIds] = useState([]);
+  const [viewReceiptTransaction, setViewReceiptTransaction] = useState(null);
   const [sortConfig, setSortConfig] = useState({
     field: "date",
     direction: "desc",
@@ -684,16 +697,20 @@ export function TransactionTable({ transactions = [], accountName = "NSS Account
                         {getPaymentIcon(transaction.meta.paymentMethod)}
                         <span>{transaction.meta.paymentMethod}</span>
                       </Badge>
-                      {transaction.meta.hasReceipt ? (
+                      {transaction.receiptUrl || transaction.meta.hasReceipt ? (
                         <TooltipProvider>
                           <Tooltip>
-                            <TooltipTrigger>
-                              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
-                                <Receipt className="h-3 w-3" />
-                              </span>
+                            <TooltipTrigger asChild>
+                              <button
+                                type="button"
+                                onClick={() => setViewReceiptTransaction(transaction)}
+                                className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-100 text-emerald-700 hover:bg-emerald-200 dark:bg-emerald-950 dark:text-emerald-300 dark:hover:bg-emerald-900 transition-colors cursor-pointer border border-emerald-300 shadow-2xs"
+                              >
+                                <Receipt className="h-3.5 w-3.5" />
+                              </button>
                             </TooltipTrigger>
                             <TooltipContent>
-                              <p className="text-xs">Physical/Digital voucher attached</p>
+                              <p className="text-xs">Click to view scanned receipt proof</p>
                             </TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
@@ -735,6 +752,15 @@ export function TransactionTable({ transactions = [], accountName = "NSS Account
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
+                        {(transaction.receiptUrl || transaction.meta.hasReceipt) && (
+                          <DropdownMenuItem
+                            onClick={() => setViewReceiptTransaction(transaction)}
+                            className="gap-2 font-medium text-emerald-700 dark:text-emerald-400 cursor-pointer"
+                          >
+                            <Eye className="h-4 w-4" />
+                            View Receipt Proof
+                          </DropdownMenuItem>
+                        )}
                         <DropdownMenuItem
                           onClick={() =>
                             router.push(
@@ -789,6 +815,105 @@ export function TransactionTable({ transactions = [], accountName = "NSS Account
           </div>
         </div>
       )}
+      {/* Scanned Receipt Proof Modal */}
+      <Dialog
+        open={Boolean(viewReceiptTransaction)}
+        onOpenChange={(open) => {
+          if (!open) setViewReceiptTransaction(null);
+        }}
+      >
+        <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <div className="flex items-center gap-2">
+              <span className="p-1.5 rounded-lg bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+                <Receipt className="h-5 w-5" />
+              </span>
+              <div>
+                <DialogTitle className="text-base font-bold text-blue-950 dark:text-white">
+                  Scanned Receipt Proof
+                </DialogTitle>
+                <DialogDescription className="text-xs text-muted-foreground">
+                  NSS Unit Audit Voucher • PVG&apos;s COET, PUNE
+                </DialogDescription>
+              </div>
+            </div>
+          </DialogHeader>
+
+          {viewReceiptTransaction && (
+            <div className="space-y-4 pt-2">
+              {/* Voucher Details Snapshot */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 p-3 bg-slate-50 dark:bg-slate-900 rounded-xl border text-xs">
+                <div>
+                  <span className="text-muted-foreground block text-[10px] uppercase font-bold">Amount</span>
+                  <span className="font-mono font-bold text-sm text-foreground">
+                    ₹{Number(viewReceiptTransaction.amount).toFixed(2)}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground block text-[10px] uppercase font-bold">Date</span>
+                  <span className="font-medium text-foreground">
+                    {format(new Date(viewReceiptTransaction.date), "dd MMM yyyy")}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground block text-[10px] uppercase font-bold">Event</span>
+                  <span className="font-medium text-foreground truncate block">
+                    {viewReceiptTransaction.meta.eventName}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground block text-[10px] uppercase font-bold">Payment Mode</span>
+                  <span className="font-medium text-foreground">
+                    {viewReceiptTransaction.meta.paymentMethod}
+                  </span>
+                </div>
+              </div>
+
+              {/* Receipt Image Display */}
+              <div className="rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden bg-slate-950 flex flex-col items-center justify-center min-h-64 relative group">
+                {viewReceiptTransaction.receiptUrl ? (
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  <img
+                    src={viewReceiptTransaction.receiptUrl}
+                    alt="Scanned Receipt Proof"
+                    className="max-h-96 w-auto object-contain rounded-lg shadow-md"
+                  />
+                ) : (
+                  <div className="p-8 text-center text-slate-400 space-y-2">
+                    <ImageIcon className="h-10 w-10 mx-auto opacity-50" />
+                    <p className="text-xs">Receipt voucher confirmed by treasurer.</p>
+                    <p className="text-[10px] text-slate-500">Physical receipt voucher filed in NSS unit file.</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Action Buttons */}
+              <DialogFooter className="flex flex-row justify-between sm:justify-between items-center gap-2">
+                {viewReceiptTransaction.receiptUrl ? (
+                  <a
+                    href={viewReceiptTransaction.receiptUrl}
+                    download={`NSS_Receipt_${format(new Date(viewReceiptTransaction.date), "yyyyMMdd")}_${viewReceiptTransaction.id}.png`}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-300 text-xs font-semibold text-foreground hover:bg-slate-100 dark:hover:bg-slate-800"
+                  >
+                    <Download className="h-3.5 w-3.5" />
+                    Download Proof Image
+                  </a>
+                ) : (
+                  <div />
+                )}
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setViewReceiptTransaction(null)}
+                >
+                  Close
+                </Button>
+              </DialogFooter>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

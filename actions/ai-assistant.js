@@ -8,10 +8,11 @@ import { parseNssMetadata } from "@/data/nss-events";
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 const FALLBACK_MODELS = [
+  "gemini-3.5-flash",
+  "gemini-3.6-flash",
   "gemini-3.7-flash",
-  "gemini-2.5-flash",
-  "gemini-1.5-flash",
-  "gemini-1.5-pro",
+  "gemini-3.1-flash-lite",
+  "gemini-flash-latest",
 ];
 
 export async function askNssAiAssistant({ prompt, history = [] }) {

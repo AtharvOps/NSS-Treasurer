@@ -71,8 +71,9 @@ export function AddTransactionForm({
     initialMeta?.reimbursementStatus || "Direct Expense"
   );
   const [receiptAttached, setReceiptAttached] = useState(
-    initialMeta?.hasReceipt || false
+    initialMeta?.hasReceipt || Boolean(initialData?.receiptUrl)
   );
+  const [receiptUrl, setReceiptUrl] = useState(initialData?.receiptUrl || null);
 
   const {
     register,
@@ -94,6 +95,7 @@ export function AddTransactionForm({
             accountId: initialData.accountId,
             category: initialData.category,
             date: new Date(initialData.date),
+            receiptUrl: initialData.receiptUrl || null,
             isRecurring: initialData.isRecurring,
             ...(initialData.recurringInterval && {
               recurringInterval: initialData.recurringInterval,
@@ -105,6 +107,7 @@ export function AddTransactionForm({
             description: "",
             accountId: accounts.find((ac) => ac.isDefault)?.id,
             date: new Date(),
+            receiptUrl: null,
             isRecurring: false,
           },
   });
@@ -122,11 +125,12 @@ export function AddTransactionForm({
       eventName: selectedEvent,
       paymentMethod: selectedPayment,
       reimbursementStatus: selectedStatus,
-      hasReceipt: receiptAttached,
+      hasReceipt: receiptAttached || Boolean(receiptUrl),
     });
 
     const formData = {
       ...data,
+      receiptUrl: receiptUrl || data.receiptUrl || null,
       description: formattedDesc,
       amount: parseFloat(data.amount),
     };
@@ -148,8 +152,11 @@ export function AddTransactionForm({
       if (scannedData.category) {
         setValue("category", scannedData.category);
       }
+      if (scannedData.receiptUrl) {
+        setReceiptUrl(scannedData.receiptUrl);
+        setValue("receiptUrl", scannedData.receiptUrl);
+      }
       setReceiptAttached(true);
-      toast.success("Receipt scanned and attached to transaction voucher");
     }
   };
 
@@ -177,14 +184,52 @@ export function AddTransactionForm({
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
       {/* Receipt Scanner - Only show in create mode */}
       {!editMode && (
-        <div className="rounded-2xl border border-blue-900/20 dark:border-blue-700/40 bg-gradient-to-r from-blue-50/80 via-slate-50 to-indigo-50/80 dark:from-slate-900 dark:via-slate-900 dark:to-blue-950/40 p-4 shadow-xs">
-          <div className="flex items-center gap-2 mb-2">
-            <Sparkles className="h-4 w-4 text-amber-500" />
-            <span className="text-xs font-bold text-blue-950 dark:text-blue-200 uppercase tracking-wider">
-              Gemini AI Receipt OCR
-            </span>
+        <div className="rounded-2xl border border-blue-900/20 dark:border-blue-700/40 bg-gradient-to-r from-blue-50/80 via-slate-50 to-indigo-50/80 dark:from-slate-900 dark:via-slate-900 dark:to-blue-950/40 p-4 shadow-xs space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-amber-500" />
+              <span className="text-xs font-bold text-blue-950 dark:text-blue-200 uppercase tracking-wider">
+                Gemini AI Receipt OCR
+              </span>
+            </div>
+            {receiptUrl && (
+              <span className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-950 px-2 py-0.5 rounded-full flex items-center gap-1 border border-emerald-300">
+                <Receipt className="h-3 w-3" /> Proof Attached
+              </span>
+            )}
           </div>
           <ReceiptScanner onScanComplete={handleScanComplete} />
+
+          {/* Scanned Receipt Proof Preview Card */}
+          {receiptUrl && (
+            <div className="flex items-center justify-between p-2.5 bg-white dark:bg-slate-900 rounded-xl border border-emerald-500/40 shadow-2xs">
+              <div className="flex items-center gap-3">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={receiptUrl}
+                  alt="Scanned receipt proof"
+                  className="h-12 w-12 object-cover rounded-lg border border-slate-200 dark:border-slate-800 shadow-2xs"
+                />
+                <div className="flex flex-col">
+                  <span className="text-xs font-bold text-foreground">Scanned Receipt Proof</span>
+                  <span className="text-[11px] text-muted-foreground">Will be saved to audit ledger as proof</span>
+                </div>
+              </div>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setReceiptUrl(null);
+                  setValue("receiptUrl", null);
+                  setReceiptAttached(false);
+                }}
+                className="h-7 text-xs text-rose-600 hover:text-rose-700 hover:bg-rose-50"
+              >
+                Remove
+              </Button>
+            </div>
+          )}
         </div>
       )}
 
